@@ -1,0 +1,19 @@
+﻿# Dependencies
+node_modules/
+npm-debug.log*
+
+# Environment & Secrets
+.env
+.env.local
+
+# Local Databases & Docker Volumes
+*.sqlite
+*.sqlite3
+*.db
+data/
+
+# OS & Editor Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

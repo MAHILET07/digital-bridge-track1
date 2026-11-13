@@ -1,0 +1,54 @@
+openapi: 3.0.3
+info: { title: Digital Bridge Accessible Onboarding API, version: 0.1.0 }
+servers: [{ url: /api/v1 }]
+paths:
+  /sessions:
+    post:
+      summary: Start an onboarding or job-application session (never expires)
+      requestBody: { content: { application/json: { schema: { type: object, properties: { kind: { type: string, enum: [signup, job_application] }, lang: { type: string, enum: [en, am] } } } } } }
+      responses: { '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Session' } } } } }
+  /sessions/{id}:
+    get:
+      summary: Fetch saved progress
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Session' } } } }, '404': { $ref: '#/components/responses/Error' } }
+  /sessions/{id}/steps/{stepId}:
+    put:
+      summary: Save one answer (idempotent; safe to replay from offline queue)
+      parameters: [{ $ref: '#/components/parameters/id' }, { name: stepId, in: path, required: true, schema: { type: string } }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { value: {} } } } } }
+      responses: { '200': { description: Saved }, '404': { $ref: '#/components/responses/Error' } }
+  /sessions/{id}/complete:
+    post:
+      summary: Finish; creates user and private support request
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      responses: { '200': { description: Done } }
+  /sessions/{id}/resume-token:
+    post:
+      summary: Create short code / link for SMS save-and-resume
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      responses: { '200': { description: Token } }
+  /resume/{token}:
+    get:
+      summary: Exchange resume token for session id
+      parameters: [{ name: token, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: OK }, '404': { $ref: '#/components/responses/Error' } }
+  /jobs:
+    get:
+      summary: List jobs; filter by supports needed (no disclosure of why)
+      parameters: [{ name: support, in: query, description: 'Comma-separated codes e.g. screen_reader,sign_language', schema: { type: string } }]
+      responses: { '200': { description: Jobs, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Job' } } } } } }
+    post:
+      summary: Employer accommodation form
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/Job' } } } }
+      responses: { '201': { description: Created }, '400': { $ref: '#/components/responses/Error' } }
+  /jobs.jsonld:
+    get:
+      summary: schema.org/JobPosting JSON-LD feed
+      responses: { '200': { description: JSON-LD, content: { application/ld+json: { schema: { type: array, items: { type: object } } } } } }
+components:
+  parameters: { id: { name: id, in: path, required: true, schema: { type: string } } }
+  responses: { Error: { description: Plain-language error, content: { application/json: { schema: { type: object, properties: { error: { type: object, properties: { code: { type: integer }, message: { type: string } } } } } } } } }
+  schemas:
+    Session: { type: object, properties: { id: { type: string }, lang: { type: string }, answers: { type: object }, current_step: { type: string, nullable: true } } }
+    Job: { type: object, required: [title, employer], properties: { id: { type: integer }, title: { type: string }, employer: { type: string }, description: { type: string }, location: { type: string }, employment_type: { type: string }, accommodations: { type: array, items: { type: object, properties: { code: { type: string }, detail: { type: string } } } } } }

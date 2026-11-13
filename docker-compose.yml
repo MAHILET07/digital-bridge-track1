@@ -1,0 +1,20 @@
+# One command: docker compose up --build   → http://localhost:3000
+services:
+  app:
+    build: ./backend
+    ports: ["3000:3000"]
+    environment: { DB_PATH: /data/bridge.db, PORT: 3000 }
+    volumes:
+      - dbdata:/data
+      - ./frontend:/app/frontend:ro   # served statically; edit & refresh
+  # a11y gate:  docker compose --profile test run --rm axe
+  axe:
+    profiles: ["test"]
+    image: mcr.microsoft.com/playwright:v1.48.0-jammy
+    working_dir: /tests
+    volumes: ["./tests/a11y:/tests"]
+    environment: { BASE_URL: "http://app:3000" }
+    depends_on: [app]
+    command: sh -c "npm install --silent && node axe.test.js"
+volumes:
+  dbdata:
